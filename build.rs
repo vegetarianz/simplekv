@@ -4,6 +4,6 @@ fn main() {
     config.type_attribute(".", "#[derive(PartialOrd)]");
     config
         .out_dir("src/pb")
-        .compile_protos(&["abi.proto"], &["."])
+        .compile_protos(&["api.proto"], &["proto/"])
         .unwrap();
 }

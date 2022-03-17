@@ -1,7 +1,7 @@
 
 syntax = "proto3";
 
-package abi;
+package api;
 
 // 来自客户端的命令请求
 message CommandRequest {
