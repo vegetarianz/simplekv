@@ -9,7 +9,7 @@ use tracing::info;
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
-    let addr = "127.0.0.1:9527";
+    let addr = "127.0.0.1:6000";
     // 连接服务器
     let stream = TcpStream::connect(addr).await?;
 
