@@ -34,6 +34,66 @@ impl CommandRequest {
             })),
         }
     }
+
+    /// 创建 HMGET 命令
+    pub fn new_hmget(table: impl Into<String>, keys: Vec<String>) -> Self {
+        Self {
+            request_data: Some(RequestData::Hmget(Hmget {
+                table: table.into(),
+                keys,
+            })),
+        }
+    }
+
+    /// 创建 HMSET 命令
+    pub fn new_hmset(table: impl Into<String>, pairs: Vec<Kvpair>) -> Self {
+        Self {
+            request_data: Some(RequestData::Hmset(Hmset {
+                table: table.into(),
+                pairs,
+            })),
+        }
+    }
+
+    /// 创建 HDEL 命令
+    pub fn new_hdel(table: impl Into<String>, key: impl Into<String>) -> Self {
+        Self {
+            request_data: Some(RequestData::Hdel(Hdel {
+                table: table.into(),
+                key: key.into(),
+            })),
+        }
+    }
+
+    /// 创建 HMDEL 命令
+    pub fn new_hmdel(table: impl Into<String>, keys: Vec<String>) -> Self {
+        Self {
+            request_data: Some(RequestData::Hmdel(Hmdel {
+                table: table.into(),
+                keys,
+            })),
+        }
+    }
+
+    /// 创建 HEXIST 命令
+    pub fn new_hexist(table: impl Into<String>, key: impl Into<String>) -> Self {
+        Self {
+            request_data: Some(RequestData::Hexist(Hexist {
+                table: table.into(),
+                key: key.into(),
+            })),
+        }
+    }
+
+    /// 创建 HMEXIST 命令
+    pub fn new_hmexist(table: impl Into<String>, keys: Vec<String>) -> Self {
+        Self {
+            request_data: Some(RequestData::Hmexist(Hmexist {
+                table: table.into(),
+                keys,
+            })),
+        }
+    }
 }
 
 impl Kvpair {
@@ -64,11 +124,20 @@ impl From<&str> for Value {
     }
 }
 
-/// 从 i64转换成 Value
+/// 从 i64 转换成 Value
 impl From<i64> for Value {
     fn from(i: i64) -> Self {
         Self {
             value: Some(value::Value::Integer(i)),
+        }
+    }
+}
+
+/// 从 bool 转换成 Value
+impl From<bool> for Value {
+    fn from(b: bool) -> Self {
+        Self {
+            value: Some(value::Value::Bool(b)),
         }
     }
 }
@@ -112,5 +181,16 @@ impl From<KvError> for CommandResponse {
         }
 
         result
+    }
+}
+
+/// 从 Vec<Value> 转换成 CommandResponse
+impl From<Vec<Value>> for CommandResponse {
+    fn from(values: Vec<Value>) -> Self {
+        Self {
+            status: StatusCode::OK.as_u16() as _,
+            values,
+            ..Default::default()
+        }
     }
 }
