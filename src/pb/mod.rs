@@ -2,6 +2,8 @@ pub mod api;
 
 use api::{command_request::RequestData, *};
 use http::StatusCode;
+use prost::Message;
+use sled::IVec;
 
 use crate::KvError;
 
@@ -138,6 +140,35 @@ impl From<bool> for Value {
     fn from(b: bool) -> Self {
         Self {
             value: Some(value::Value::Bool(b)),
+        }
+    }
+}
+
+impl TryFrom<IVec> for Value {
+    type Error = KvError;
+
+    fn try_from(v: IVec) -> Result<Self, Self::Error> {
+        Ok(Value::decode(v.as_ref())?)
+    }
+}
+
+impl TryFrom<Value> for IVec {
+    type Error = KvError;
+
+    fn try_from(v: Value) -> Result<Self, Self::Error> {
+        let mut buf = Vec::with_capacity(v.encoded_len());
+        v.encode(&mut buf)?;
+        Ok(buf.as_slice().into())
+    }
+}
+
+impl TryFrom<Value> for String {
+    type Error = KvError;
+
+    fn try_from(v: Value) -> Result<Self, Self::Error> {
+        match v.value {
+            Some(value::Value::String(s)) => Ok(s),
+            _ => Err(KvError::ConvertError(v, "String")),
         }
     }
 }

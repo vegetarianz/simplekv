@@ -1,14 +1,22 @@
 mod memory;
+mod sleddb;
+
 pub use memory::MemTable;
+pub use sleddb::SledDB;
 
 use crate::{KvError, Kvpair, Value};
 
-/// 对存储的抽象，我们不关心数据存在哪儿，但需要定义外界如何和存储打交道
+/// 对存储的抽象，不关心数据存在哪儿，但需要定义外界如何和存储打交道
 pub trait Storage {
     /// 从一个 HashTable 里获取一个 key 的 value
     fn get(&self, table: &str, key: &str) -> Result<Option<Value>, KvError>;
     /// 从一个 HashTable 里设置一个 key 的 value，返回旧的 value
-    fn set(&self, table: &str, key: String, value: Value) -> Result<Option<Value>, KvError>;
+    fn set(
+        &self,
+        table: &str,
+        key: impl Into<String>,
+        value: impl Into<Value>,
+    ) -> Result<Option<Value>, KvError>;
     /// 查看 HashTable 中是否有 key
     fn contains(&self, table: &str, key: &str) -> Result<bool, KvError>;
     /// 从 HashTable 中删除一个 key
@@ -44,6 +52,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::tempdir;
 
     #[test]
     fn memtable_basic_interface_should_work() {
@@ -63,12 +72,30 @@ mod tests {
         test_get_iter(store);
     }
 
+    #[test]
+    fn sleddb_basic_interface_should_work() {
+        let store = SledDB::new(tempdir().unwrap());
+        test_basi_interface(store);
+    }
+
+    #[test]
+    fn sleddb_get_all_should_work() {
+        let store = SledDB::new(tempdir().unwrap());
+        test_get_all(store);
+    }
+
+    #[test]
+    fn sleddb_iter_should_work() {
+        let store = SledDB::new(tempdir().unwrap());
+        test_get_iter(store);
+    }
+
     fn test_basi_interface(store: impl Storage) {
         // 第一次 set 会创建 table，插入 key 并返回 None（之前没值）
-        let v = store.set("t1", "hello".into(), "world".into());
+        let v = store.set("t1", "hello", "world");
         assert!(v.unwrap().is_none());
         // 再次 set 同样的 key 会更新，并返回之前的值
-        let v1 = store.set("t1", "hello".into(), "world1".into());
+        let v1 = store.set("t1", "hello", "world1");
         assert_eq!(v1, Ok(Some("world".into())));
 
         // get 存在的 key 会得到最新的值
@@ -94,8 +121,8 @@ mod tests {
     }
 
     fn test_get_all(store: impl Storage) {
-        store.set("t2", "k1".into(), "v1".into()).unwrap();
-        store.set("t2", "k2".into(), "v2".into()).unwrap();
+        store.set("t2", "k1", "v1").unwrap();
+        store.set("t2", "k2", "v2").unwrap();
         let mut data = store.get_all("t2").unwrap();
         data.sort_by(|a, b| a.partial_cmp(b).unwrap());
         assert_eq!(
@@ -108,8 +135,8 @@ mod tests {
     }
 
     fn test_get_iter(store: impl Storage) {
-        store.set("t2", "k1".into(), "v1".into()).unwrap();
-        store.set("t2", "k2".into(), "v2".into()).unwrap();
+        store.set("t2", "k1", "v1").unwrap();
+        store.set("t2", "k2", "v2").unwrap();
         let mut data: Vec<_> = store.get_iter("t2").unwrap().collect();
         data.sort_by(|a, b| a.partial_cmp(b).unwrap());
         assert_eq!(
