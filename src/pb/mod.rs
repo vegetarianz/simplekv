@@ -1,6 +1,7 @@
 pub mod api;
 
 use api::{command_request::RequestData, *};
+use bytes::Bytes;
 use http::StatusCode;
 use prost::Message;
 use sled::IVec;
@@ -141,6 +142,20 @@ impl From<bool> for Value {
         Self {
             value: Some(value::Value::Bool(b)),
         }
+    }
+}
+
+impl From<Bytes> for Value {
+    fn from(buf: Bytes) -> Self {
+        Self {
+            value: Some(value::Value::Binary(buf)),
+        }
+    }
+}
+
+impl<const N: usize> From<&[u8; N]> for Value {
+    fn from(buf: &[u8; N]) -> Self {
+        Bytes::copy_from_slice(buf).into()
     }
 }
 
