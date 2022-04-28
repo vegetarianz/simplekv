@@ -1,6 +1,7 @@
 use std::io::{Read, Write};
 
 use crate::{CommandRequest, CommandResponse, KvError};
+
 use bytes::{Buf, BufMut, BytesMut};
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use prost::Message;
@@ -118,32 +119,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::DummyStream;
     use crate::Value;
     use bytes::Bytes;
-
-    struct DummyStream {
-        buf: BytesMut,
-    }
-
-    impl AsyncRead for DummyStream {
-        fn poll_read(
-            self: std::pin::Pin<&mut Self>,
-            _cx: &mut std::task::Context<'_>,
-            buf: &mut tokio::io::ReadBuf<'_>,
-        ) -> std::task::Poll<std::io::Result<()>> {
-            // 看看 ReadBuf 需要多大的数据
-            let len = buf.capacity();
-
-            // split 出这么大的数据
-            let data = self.get_mut().buf.split_to(len);
-
-            // 拷贝给 ReadBuf
-            buf.put_slice(&data);
-
-            // 直接完工
-            std::task::Poll::Ready(Ok(()))
-        }
-    }
 
     #[test]
     fn command_request_encode_decode_should_work() {
