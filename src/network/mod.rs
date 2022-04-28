@@ -1,10 +1,12 @@
 mod frame;
+mod tls;
 
 use crate::{CommandRequest, CommandResponse, KvError, Service};
 use bytes::BytesMut;
 pub use frame::FrameCoder;
+pub use tls::{TlsClientConnector, TlsServerAcceptor};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
-use tracing::{debug, info};
+use tracing::debug;
 
 pub struct ProstServerStream<S> {
     inner: S,

@@ -74,21 +74,25 @@ impl<Store> ServiceInner<Store> {
         }
     }
 
+    #[allow(dead_code)]
     fn fn_received(mut self, on_received: fn(&CommandRequest)) -> Self {
         self.on_received.push(on_received);
         self
     }
 
+    #[allow(dead_code)]
     fn fn_executed(mut self, on_executed: fn(&CommandResponse)) -> Self {
         self.on_executed.push(on_executed);
         self
     }
 
+    #[allow(dead_code)]
     fn fn_before_send(mut self, on_before_send: fn(&mut CommandResponse)) -> Self {
         self.on_before_send.push(on_before_send);
         self
     }
 
+    #[allow(dead_code)]
     fn fn_after_send(mut self, on_after_send: fn()) -> Self {
         self.on_after_send.push(on_after_send);
         self
