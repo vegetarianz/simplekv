@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     let pem = create_ca()?;
     gen_files(&pem).await?;
     let ca = load_ca(&pem.cert, &pem.key)?;
-    let pem = create_cert(&ca, &["demo.simplekv.cc"], "Acme KV server", false)?;
+    let pem = create_cert(&ca, &["demo.simplekv.cc"], "Simple KV server", false)?;
     gen_files(&pem).await?;
     let pem = create_cert(&ca, &[], "awesome-device-id", true)?;
     gen_files(&pem).await?;
@@ -22,7 +22,7 @@ async fn main() -> Result<()> {
 
 fn create_ca() -> Result<CertPem> {
     let (cert, key) = generate_ca(
-        &["acme.inc"],
+        &["simplekv.cc"],
         "CN",
         "Acme Inc.",
         "Acme CA",

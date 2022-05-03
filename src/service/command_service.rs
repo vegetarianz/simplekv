@@ -4,7 +4,7 @@ impl CommandService for Hget {
     fn execute(self, store: &impl Storage) -> CommandResponse {
         match store.get(&self.table, &self.key) {
             Ok(Some(v)) => v.into(),
-            Ok(None) => KvError::NotFound(self.table, self.key).into(),
+            Ok(None) => KvError::NotFound(format!("table {}, key {}", self.table, self.key)).into(),
             Err(e) => e.into(),
         }
     }
@@ -114,10 +114,10 @@ mod tests {
         let store = MemTable::new();
         let cmd = CommandRequest::new_hset("t1", "hello", "world".into());
         let res = dispatch(cmd.clone(), &store);
-        assert_res_ok(res, &[Value::default()], &[]);
+        assert_res_ok(&res, &[Value::default()], &[]);
 
         let res = dispatch(cmd, &store);
-        assert_res_ok(res, &["world".into()], &[]);
+        assert_res_ok(&res, &["world".into()], &[]);
     }
 
     #[test]
@@ -127,7 +127,7 @@ mod tests {
         dispatch(cmd, &store);
         let cmd = CommandRequest::new_hget("score", "u1");
         let res = dispatch(cmd, &store);
-        assert_res_ok(res, &[10.into()], &[]);
+        assert_res_ok(&res, &[10.into()], &[]);
     }
 
     #[test]
@@ -136,7 +136,7 @@ mod tests {
         set_key_pairs("user", vec![("u1", "s1"), ("u2", "s2")], &store);
         let cmd = CommandRequest::new_hmget("user", vec!["u1".into(), "u2".into(), "u3".into()]);
         let res = dispatch(cmd, &store);
-        assert_res_ok(res, &["s1".into(), "s2".into(), Value::default()], &[]);
+        assert_res_ok(&res, &["s1".into(), "s2".into(), Value::default()], &[]);
     }
 
     #[test]
@@ -150,7 +150,7 @@ mod tests {
         ];
         let cmd = CommandRequest::new_hmset("user", pairs);
         let res = dispatch(cmd, &store);
-        assert_res_ok(res, &["s1".into(), "s2".into(), Value::default()], &[]);
+        assert_res_ok(&res, &["s1".into(), "s2".into(), Value::default()], &[]);
     }
 
     #[test]
@@ -159,10 +159,10 @@ mod tests {
         set_key_pairs("user", vec![("u1", "s1")], &store);
         let cmd = CommandRequest::new_hdel("user", "u1");
         let res = dispatch(cmd.clone(), &store);
-        assert_res_ok(res, &["s1".into()], &[]);
+        assert_res_ok(&res, &["s1".into()], &[]);
 
         let res = dispatch(cmd, &store);
-        assert_res_ok(res, &[Value::default()], &[]);
+        assert_res_ok(&res, &[Value::default()], &[]);
     }
 
     #[test]
@@ -171,7 +171,7 @@ mod tests {
         set_key_pairs("user", vec![("u1", "s1")], &store);
         let cmd = CommandRequest::new_hmdel("user", vec!["u1".into(), "u2".into()]);
         let res = dispatch(cmd.clone(), &store);
-        assert_res_ok(res, &["s1".into(), Value::default()], &[]);
+        assert_res_ok(&res, &["s1".into(), Value::default()], &[]);
     }
 
     #[test]
@@ -180,11 +180,11 @@ mod tests {
         set_key_pairs("user", vec![("u1", "s1")], &store);
         let cmd = CommandRequest::new_hexist("user", "u1");
         let res = dispatch(cmd.clone(), &store);
-        assert_res_ok(res, &[true.into()], &[]);
+        assert_res_ok(&res, &[true.into()], &[]);
 
         let cmd = CommandRequest::new_hexist("user", "u2");
         let res = dispatch(cmd.clone(), &store);
-        assert_res_ok(res, &[false.into()], &[]);
+        assert_res_ok(&res, &[false.into()], &[]);
     }
 
     #[test]
@@ -193,7 +193,7 @@ mod tests {
         set_key_pairs("user", vec![("u1", "s1"), ("u2", "s2")], &store);
         let cmd = CommandRequest::new_hmexist("user", vec!["u1".into(), "u2".into(), "u3".into()]);
         let res = dispatch(cmd.clone(), &store);
-        assert_res_ok(res, &[true.into(), true.into(), false.into()], &[]);
+        assert_res_ok(&res, &[true.into(), true.into(), false.into()], &[]);
     }
 
     fn set_key_pairs(table: &str, pairs: Vec<(&str, impl Into<Value>)>, store: &impl Storage) {
@@ -210,7 +210,7 @@ mod tests {
         let store = MemTable::new();
         let cmd = CommandRequest::new_hget("score", "u1");
         let res = dispatch(cmd, &store);
-        assert_res_error(res, 404, "Not found");
+        assert_res_error(&res, 404, "Not found");
     }
 
     #[test]
@@ -233,6 +233,6 @@ mod tests {
             Kvpair::new("u2", 8.into()),
             Kvpair::new("u3", 11.into()),
         ];
-        assert_res_ok(res, &[], pairs);
+        assert_res_ok(&res, &[], pairs);
     }
 }

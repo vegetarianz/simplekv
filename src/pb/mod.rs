@@ -9,7 +9,6 @@ use sled::IVec;
 use crate::KvError;
 
 impl CommandRequest {
-    /// 创建 HGET 命令
     pub fn new_hget(table: impl Into<String>, key: impl Into<String>) -> Self {
         Self {
             request_data: Some(RequestData::Hget(Hget {
@@ -19,7 +18,6 @@ impl CommandRequest {
         }
     }
 
-    /// 创建 HGETALL 命令
     pub fn new_hgetall(table: impl Into<String>) -> Self {
         Self {
             request_data: Some(RequestData::Hgetall(Hgetall {
@@ -28,7 +26,6 @@ impl CommandRequest {
         }
     }
 
-    /// 创建 HSET 命令
     pub fn new_hset(table: impl Into<String>, key: impl Into<String>, value: Value) -> Self {
         Self {
             request_data: Some(RequestData::Hset(Hset {
@@ -38,7 +35,6 @@ impl CommandRequest {
         }
     }
 
-    /// 创建 HMGET 命令
     pub fn new_hmget(table: impl Into<String>, keys: Vec<String>) -> Self {
         Self {
             request_data: Some(RequestData::Hmget(Hmget {
@@ -48,7 +44,6 @@ impl CommandRequest {
         }
     }
 
-    /// 创建 HMSET 命令
     pub fn new_hmset(table: impl Into<String>, pairs: Vec<Kvpair>) -> Self {
         Self {
             request_data: Some(RequestData::Hmset(Hmset {
@@ -58,7 +53,6 @@ impl CommandRequest {
         }
     }
 
-    /// 创建 HDEL 命令
     pub fn new_hdel(table: impl Into<String>, key: impl Into<String>) -> Self {
         Self {
             request_data: Some(RequestData::Hdel(Hdel {
@@ -68,7 +62,6 @@ impl CommandRequest {
         }
     }
 
-    /// 创建 HMDEL 命令
     pub fn new_hmdel(table: impl Into<String>, keys: Vec<String>) -> Self {
         Self {
             request_data: Some(RequestData::Hmdel(Hmdel {
@@ -78,7 +71,6 @@ impl CommandRequest {
         }
     }
 
-    /// 创建 HEXIST 命令
     pub fn new_hexist(table: impl Into<String>, key: impl Into<String>) -> Self {
         Self {
             request_data: Some(RequestData::Hexist(Hexist {
@@ -88,7 +80,6 @@ impl CommandRequest {
         }
     }
 
-    /// 创建 HMEXIST 命令
     pub fn new_hmexist(table: impl Into<String>, keys: Vec<String>) -> Self {
         Self {
             request_data: Some(RequestData::Hmexist(Hmexist {
@@ -96,6 +87,35 @@ impl CommandRequest {
                 keys,
             })),
         }
+    }
+
+    pub fn new_subscribe(name: impl Into<String>) -> Self {
+        Self {
+            request_data: Some(RequestData::Subscribe(Subscribe { topic: name.into() })),
+        }
+    }
+
+    pub fn new_unsubscribe(name: impl Into<String>, id: u32) -> Self {
+        Self {
+            request_data: Some(RequestData::Unsubscribe(Unsubscribe {
+                topic: name.into(),
+                id,
+            })),
+        }
+    }
+
+    pub fn new_publish(name: impl Into<String>, data: Vec<Value>) -> Self {
+        Self {
+            request_data: Some(RequestData::Publish(Publish {
+                topic: name.into(),
+                data,
+            })),
+        }
+    }
+
+    /// 转换成 string 做错误处理
+    pub fn format(&self) -> String {
+        format!("{:?}", self)
     }
 }
 
@@ -167,6 +187,13 @@ impl TryFrom<IVec> for Value {
     }
 }
 
+impl Value {
+    /// 转换成 string 做错误处理
+    pub fn format(&self) -> String {
+        format!("{:?}", self)
+    }
+}
+
 impl TryFrom<Value> for IVec {
     type Error = KvError;
 
@@ -177,14 +204,47 @@ impl TryFrom<Value> for IVec {
     }
 }
 
+impl TryFrom<&Value> for i64 {
+    type Error = KvError;
+
+    fn try_from(v: &Value) -> Result<Self, Self::Error> {
+        match v.value {
+            Some(value::Value::Integer(i)) => Ok(i),
+            _ => Err(KvError::ConvertError(v.format(), "Integer")),
+        }
+    }
+}
+
 impl TryFrom<Value> for String {
     type Error = KvError;
 
     fn try_from(v: Value) -> Result<Self, Self::Error> {
         match v.value {
             Some(value::Value::String(s)) => Ok(s),
-            _ => Err(KvError::ConvertError(v, "String")),
+            _ => Err(KvError::ConvertError(v.format(), "String")),
         }
+    }
+}
+
+impl CommandResponse {
+    pub fn ok() -> Self {
+        CommandResponse {
+            status: StatusCode::OK.as_u16() as _,
+            ..Default::default()
+        }
+    }
+
+    pub fn internal_error(msg: String) -> Self {
+        CommandResponse {
+            status: StatusCode::INTERNAL_SERVER_ERROR.as_u16() as _,
+            message: msg,
+            ..Default::default()
+        }
+    }
+
+    /// 转换成 string 做错误处理
+    pub fn format(&self) -> String {
+        format!("{:?}", self)
     }
 }
 
@@ -221,7 +281,7 @@ impl From<KvError> for CommandResponse {
         };
 
         match e {
-            KvError::NotFound(_, _) => result.status = StatusCode::NOT_FOUND.as_u16() as _,
+            KvError::NotFound(_) => result.status = StatusCode::NOT_FOUND.as_u16() as _,
             KvError::InvalidCommand(_) => result.status = StatusCode::BAD_REQUEST.as_u16() as _,
             _ => {}
         }
@@ -237,6 +297,20 @@ impl From<Vec<Value>> for CommandResponse {
             status: StatusCode::OK.as_u16() as _,
             values,
             ..Default::default()
+        }
+    }
+}
+
+impl TryFrom<&CommandResponse> for i64 {
+    type Error = KvError;
+
+    fn try_from(value: &CommandResponse) -> Result<Self, Self::Error> {
+        if value.status != StatusCode::OK.as_u16() as u32 {
+            return Err(KvError::ConvertError(value.format(), "CommandResponse"));
+        }
+        match value.values.get(0) {
+            Some(v) => v.try_into(),
+            None => Err(KvError::ConvertError(value.format(), "CommandResponse")),
         }
     }
 }
